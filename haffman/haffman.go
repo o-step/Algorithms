@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"unicode/utf8"
+	"sort"
 )
 
 type Item struct {
@@ -15,7 +17,7 @@ type MyNode struct {
 	rightChild *MyNode
 }
 
-func main() {
+func mainК() {
 	var s string
 	fmt.Scan(&s)
 
@@ -116,3 +118,130 @@ func traverseRecursive(node *MyNode, dictionary map[string]string) {
 		traverseRecursive(node.rightChild, dictionary);
 	}
 }
+
+type Data struct {
+	symbol string
+	code string
+}
+
+type DecodeNode struct {
+	data Data
+	leftChild *DecodeNode
+	rightChild *DecodeNode
+}
+
+func main() {
+	var k, l int
+	var key, val string
+	var encdedStr string
+	dictionary := make(map[string]string)
+	codes := make([]string, 0)
+
+	fmt.Scanf("%d %d\n", &k, &l)
+	for i := 0; i < k; i++ {
+		n, err := fmt.Scanf("%s %s", &key, &val)
+		if n != 2 || err != nil {
+			break
+		}
+		dictionary[string(key[0])] = val
+		codes = append(codes, val)
+	}
+	fmt.Scanf("%s\n", &encdedStr)
+
+	sort.SliceStable(codes, func(i, j int) bool {
+		return len(codes[i]) < len(codes[j])
+	})
+
+	p := new(DecodeNode)
+	p = &DecodeNode{data: Data{symbol: "", code: ""}}
+
+	for k, v := range dictionary {
+		makeTree2(k, v, p)
+	}
+
+	resStr := new(string)
+
+	traverseRecursive2(p, encdedStr, resStr, p)
+
+	fmt.Println(*resStr)
+}
+
+func makeTree2(key, val string, p *DecodeNode) {
+		if len(val) == 0 {
+			return
+		}
+
+		tempKey := ""
+		if len(val) == 1 {
+			tempKey = key
+		}
+
+		if string(val[0]) == "1" {
+			if p.rightChild == nil {
+				p.rightChild = &DecodeNode{data: Data{symbol: tempKey, code: p.data.code + "1"}}
+			}
+			_, i := utf8.DecodeRuneInString(val)
+			makeTree2(key, string(val[i:]), p.rightChild)
+		}
+
+		if string(val[0]) == "0" {
+			if p.leftChild == nil {
+				p.leftChild = &DecodeNode{data: Data{symbol: tempKey, code: p.data.code + "0"}}
+			}
+			_, i := utf8.DecodeRuneInString(val)
+			makeTree2(key, string(val[i:]), p.leftChild)
+		}
+}
+
+func traverseRecursive2(node *DecodeNode, inputStr string, resStr *string, rootNode *DecodeNode) {
+  if (node != nil && len(inputStr) != 0) {
+		if node.data.symbol == "" {
+			if len(inputStr) == 1 {
+				inputStr += "c"
+			}
+			firstChar := string(inputStr[0])
+			_, i := utf8.DecodeRuneInString(inputStr)
+			newStr := string(inputStr[i:])
+			if firstChar == "0" {
+				traverseRecursive2(node.leftChild, newStr, resStr, rootNode)
+			} else if string(inputStr[0]) == "1" {
+				traverseRecursive2(node.rightChild, newStr, resStr, rootNode)
+			}
+		} else {
+			*resStr += node.data.symbol
+			traverseRecursive2(rootNode, inputStr, resStr, rootNode)
+		}
+	}
+}
+
+// 4 14
+// a: 0
+
+// 4 14
+// a: 0
+// b: 10
+// c: 110
+// d: 111
+
+// for a
+// 1 1
+// a: 1
+// 1
+
+// for aa
+// 1 2
+// a: 0
+// 00
+
+// for ab
+// 2 2
+// a: 0
+// b: 1
+// 01
+
+// for abc
+// 3 5
+// a: 0
+// b: 1
+// c: 110
+// 01110
